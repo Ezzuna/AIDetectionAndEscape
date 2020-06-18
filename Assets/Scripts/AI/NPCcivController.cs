@@ -21,7 +21,9 @@ public class NPCcivController : MonoBehaviour
     public GameObject player;
     public PlayerController playerController;
     public int detectionRange;
-
+    public GameObject civilianContainer;
+    public List<GameObject> civilianList;
+    public CivilianManager civManager;
 
     private Transform target;
     private Transform originalPosition;
@@ -65,7 +67,11 @@ public class NPCcivController : MonoBehaviour
         originalPosition = this.transform;
         NPCStateCurrent = NPCState.Exploring;
 
-        
+        civManager = civilianContainer.GetComponent<CivilianManager>();
+
+        civilianList = new List<GameObject>();  //Add all civilians to list
+        civilianList = civManager.UpdateCivilianList();
+
     }
 
 
@@ -80,41 +86,103 @@ public class NPCcivController : MonoBehaviour
     }
     void OnTriggerEnter(Collider other)
     {
+        GameObject toDelete = new GameObject();    //creating a placeholder as to not delete mid enumeration of for each loop
         if (other.tag == "Extraction" && NPCStateCurrent == NPCState.Evacuating)
         {
-            Destroy(this.gameObject);
+            foreach (GameObject child in civilianList)
+            {
+                if (child.gameObject == this.gameObject)
+                {
+                    toDelete = child;
+                    
+                }
+            }
+
+            civManager.DeleteCiv(toDelete);
+        }
+    }
+
+
+    void CheckOtherCivs()
+    {
+        foreach (GameObject child in civilianList)
+        {
+            if(child.gameObject != this.gameObject)
+            {
+                if (child.gameObject.GetComponent<NPCcivController>().GetNPCState() == NPCState.Evacuating)
+                {
+                    if ((child.transform.position - this.transform.position).magnitude < detectionRange) //within range
+                    {
+                        if (Vector3.Angle(this.transform.forward, child.transform.position - this.transform.position) <= (120 / 2)) // AI can see AI
+                        {
+
+                            RaycastHit hit;
+                            if (Physics.Linecast(this.transform.position, child.transform.position, out hit))
+                            {
+                                if (hit.transform.gameObject == child.gameObject)
+                                {
+                                    NPCStateCurrent = NPCState.Alerted;
+                                }
+                            }
+
+                        }
+                    }
+
+                }
+            }
+
         }
     }
 
 
     void Update()
     {
+        if (NPCStateCurrent == NPCState.Alerted)
+        {
+            NPCStateCurrent = NPCState.Evacuating;
+            SetColor(Color.red);
+            NPCMoveToEscape();
+        }
+
+        civilianList = civManager.UpdateCivilianList();
+        if (NPCStateCurrent == NPCState.Exploring)
+        {
+            if (playerController.GetPlayerDangerous())
+            {
+                if ((player.transform.position - this.transform.position).magnitude < detectionRange)
+                {
+
+                    Debug.Log("Player within range");
+                    if (Vector3.Angle(this.transform.forward, player.transform.position - this.transform.position) <= (120 / 2)) // AI can see player
+                    {
+                        Debug.Log("Player within FOV");
+                        RaycastHit hit;
+                        if (Physics.Linecast(this.transform.position, player.transform.position, out hit))
+                        {
+                            Debug.Log("Pass");
+                            Debug.Log(hit.transform.tag);
+                            if (hit.transform.tag == "Player")
+                            {
+                                NPCStateCurrent = NPCState.Alerted;
+                            }
+                        }
+
+                    }
+                }
+            }
+            CheckOtherCivs();
+        }
 
 
+        
         if (playerController.GetAlertAll())
         {
             NPCStateCurrent = NPCState.Alerted;
         }
 
-        if (playerController.GetPlayerDangerous())
-        {
-            if ((player.transform.position - this.transform.position).magnitude < detectionRange)
-            {
-                if (Vector3.Angle(this.transform.forward, player.transform.position - this.transform.position) <= (120 / 2)) // AI can see player
-                {
+        
 
-                    RaycastHit hit;
-                    if (Physics.Linecast(this.transform.position, player.transform.position, out hit))
-                    {
-                        if (hit.transform.tag == "Player")
-                        {
-                            NPCStateCurrent = NPCState.Alerted;
-                        }
-                    }
 
-                }
-            }
-        }
 
 
 
@@ -127,11 +195,6 @@ public class NPCcivController : MonoBehaviour
                 timer = 0;
             }
         }
-        else if(NPCStateCurrent == NPCState.Alerted)
-        {
-            NPCStateCurrent = NPCState.Evacuating;
-            SetColor(Color.red);
-            NPCMoveToEscape();
-        }
+
     }
 }

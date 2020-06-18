@@ -55,6 +55,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+     <Compile Include="Assets\Scripts\AI\CivilianManager.cs" />
      <Compile Include="Assets\Scripts\AI\NPCcivController.cs" />
      <Compile Include="Assets\Scripts\Player\MoveCamera.cs" />
      <Compile Include="Assets\Scripts\Player\PlayerController.cs" />

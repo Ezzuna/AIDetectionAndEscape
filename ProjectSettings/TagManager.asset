@@ -5,6 +5,8 @@ TagManager:
   serializedVersion: 2
   tags:
   - Extraction
+  - Civilian
+  - Obstacle
   layers:
   - Default
   - TransparentFX
